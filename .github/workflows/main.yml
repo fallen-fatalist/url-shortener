@@ -13,7 +13,8 @@ jobs:
   deploy: 
     runs-on: ubuntu-latest
     env:
-      HOST: ubuntu@${{ secrets.PUBLIC_DNS }}
+      HOST: ubuntu@${{ secrets.EC2_HOST }}
+      SSH_KEY: ${{ secrets.EC2_SECRET }}
       DEPLOY_DIRECTORY: /home/ubuntu/url-shortener
       CONFIG_PATH: /home/ubuntu/url-shortener/config/prod.yaml
       ENV_FILE_PATH: /home/ubuntu/url-shortener/config.env
@@ -33,16 +34,16 @@ jobs:
       - name: Deploy to VM
         run: |
           sudo apt-get install -y ssh rsync
-          echo ${{ secrets.AWS_PRIVATE_KEY }} --decode
+          echo $SSH_KEY > keypair.pem
           chmod 400 keypair.pem
-          ssh -i keypair.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.DEPLOY_DIRECTORY }}"
-          rsync -avz -e 'ssh -i keypair.pem -o StrictHostKeyChecking=no' --exclude='.git' ./ ${{ env.HOST }}:${{ env.DEPLOY_DIRECTORY }}
+          ssh -i keypair.pem -o StrictHostKeyChecking=no $HOST "mkdir -p $DEPLOY_DIRECTORY"
+          rsync -avz -e 'ssh -i keypair.pem -o StrictHostKeyChecking=no' --exclude='.git' ./ $HOST:$DEPLOY_DIRECTORY
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KEY: $SSH_KEY
 
       - name: Remove old systemd service file
         run: |
-          ssh -i keypair.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "rm -f /etc/systemd/system/url-shortener.service"
+          ssh -i keypair.pem -o StrictHostKeyChecking=no $HOST "rm -f /etc/systemd/system/url-shortener.service"
 
       - name: List workspace contents
         run: |
